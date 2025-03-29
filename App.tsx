@@ -7,6 +7,9 @@ import { useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { FIREBASE_AUTH } from './FirebaseConfig';
 import Register from './app/screens/Register';
+import FaceScan from './app/screens/FaceScan';
+// import Scanface from './app/screens/Scanface';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +20,7 @@ function InsideLayout() {
     <InsideStack.Navigator>
       <InsideStack.Screen name='Ecos TEST' component={List} /> 
       <InsideStack.Screen name='details' component={Details} /> 
+      <InsideStack.Screen name='faceScan' component={FaceScan} options={{headerShown : false}} /> 
     </InsideStack.Navigator>
   );
 }
@@ -25,6 +29,7 @@ function loginRegister() {
     <InsideStack.Navigator>
       <InsideStack.Screen name='Login' component={Login} options={{headerShown : false}} /> 
       <InsideStack.Screen name='Register' component={Register} options={{headerShown : false}} /> 
+
     </InsideStack.Navigator>
   );
 }

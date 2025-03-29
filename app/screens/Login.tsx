@@ -23,7 +23,7 @@ const Login = ({navigation} : RouterProps) => {
         try {
             const res = await signInWithEmailAndPassword(auth ,email, password);
             console.log(res); 
-            alert('Login Success')
+            // alert('Login Success')
         }catch (error: any) {
             console.log(error);
             alert('Login Failed: ' + error.message);

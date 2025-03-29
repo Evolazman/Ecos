@@ -1,9 +1,10 @@
 import { TouchableOpacity , View, Text , StyleSheet, TextInput, ActivityIndicator, Button, KeyboardAvoidingView } from 'react-native'
 import React, { useState } from 'react'
-import { FIREBASE_AUTH } from '../../FirebaseConfig';
+import { FIREBASE_AUTH , FIREBASE_DB } from '../../FirebaseConfig';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { NavigationProp } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
+import { collection, addDoc , getDocs , setDoc, doc} from 'firebase/firestore';
 
 
 interface RouterProps {
@@ -12,19 +13,59 @@ interface RouterProps {
 const Register = ({navigation} : RouterProps) => {
     const { control, handleSubmit, watch, formState: { errors } } = useForm();
     const password = watch('password'); // ดึงค่าของ password ที่ผู้ใช้กรอกไว้
+    const frist_last_name = watch('frist_last_name'); // ดึงค่าของ password ที่ผู้ใช้กรอกไว้
+    const department_id = watch('department_id'); // ดึงค่าของ password ที่ผู้ใช้กรอกไว้
     const [email , setEmail] = useState('') ;
+    // const [frist_last_name , setFirst_last_name] = useState('') ;
+    // const [department_id , setDepartment_id] = useState('') ;
     const [loading , setLoading] = useState(false) ;
     const auth = FIREBASE_AUTH;
     
     const signUp = async (data : any) => {
         setLoading(true) ;
+        
         console.log('Register Data:', data);
         try {
-            const res = await createUserWithEmailAndPassword(auth ,email, password);
-            console.log(res); 
-            FIREBASE_AUTH.signOut()
-            navigation.goBack()
-            alert('Register Success')
+            if (frist_last_name == null || department_id == null ) {
+                return alert('กรุณากรอกข้อมูลให้ครบถ้วน')
+            }else {
+                const res = await createUserWithEmailAndPassword(auth ,email, password);
+                FIREBASE_AUTH.signOut()
+                if (res) {
+                    const querySnapshot = await getDocs(collection(FIREBASE_DB, 'user_id'));
+                    const ids = [];
+    
+                    querySnapshot.forEach((doc) => {
+                    // กรองเฉพาะที่เป็นตัวเลข
+                    if (!isNaN(doc.id)) {
+                        ids.push(Number(doc.id));
+                    }
+                    });
+    
+                    // หาค่า ID สูงสุด
+                    const maxId = ids.length > 0 ? Math.max(...ids) : 65131000; // ค่าเริ่มต้นถ้ายังไม่มี
+                    const newId = (maxId + 1).toString();
+                    console.log('New ID:+++++++++++++++++++++++++++++++', newId);
+                    await setDoc(doc(FIREBASE_DB, 'user_id', newId), {
+                        createdAt: new Date(),
+                        department_id: department_id,
+                        name: frist_last_name,
+                        email: email,
+                        update_at: new Date(),
+                        user_point: 0
+                      });
+                      
+                    
+                    navigation.goBack()
+                    alert('ลงทะเบียนสำเร็จ')
+                    
+                }
+                // alert('Register Success')
+                // navigation.navigate('Scanface')
+            }
+            
+            
+            
             
         }catch (error: any) {
             console.log(error);
@@ -86,6 +127,50 @@ const Register = ({navigation} : RouterProps) => {
             />
             {errors.confirmPassword && <Text style={styles.error}>{errors.confirmPassword.message}</Text>}
 
+            <Controller
+                control={control}
+                name="frist_last_name"
+                rules={{
+                required: 'First name and Last name is required',
+                minLength: { value: 6, message: 'Name must be at least 6 characters' },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                    style={styles.input}
+                    placeholder="First name - Last name"
+             
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    autoCapitalize='none'
+                />
+                )}
+            />
+            {errors.frist_last_name && <Text style={styles.error}>{errors.frist_last_name.message}</Text>}
+
+            <Controller
+                control={control}
+                name="department_id"
+                rules={{
+                required: 'Department Id is required',
+                minLength: { value: 3, message: 'Department Id must be at least 3 characters' },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                    style={styles.input}
+                    placeholder="Enter your Department Id"
+                    
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    autoCapitalize='none'
+                />
+                )}
+            />
+            {errors.department_id && <Text style={styles.error}>{errors.department_id.message}</Text>}
+            
+            {/* <TextInput value={frist_last_name} style={styles.input} placeholder='First name - Last name' autoCapitalize='none' onChangeText={(text) => setFirst_last_name(text)}></TextInput>
+            <TextInput value={department_id} style={styles.input} placeholder='Your Department Id' autoCapitalize='none' onChangeText={(text) => setDepartment_id(text)}></TextInput> */}
             {/* <TextInput value={password} style={styles.input} placeholder='Password' autoCapitalize='none' onChangeText={(text) => setPassword(text)} secureTextEntry={true}></TextInput> */}
             {/* <TextInput value={confirmPassword} style={styles.input} placeholder='Confirm Password' autoCapitalize='none' onChangeText={(text) => setConfirmPassword(text)} secureTextEntry={true}></TextInput>  */}
 
