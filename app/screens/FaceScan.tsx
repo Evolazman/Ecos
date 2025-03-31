@@ -4,7 +4,14 @@ import {StyleSheet ,TouchableOpacity , View, Text , Button ,Image } from 'react-
 import { Alert } from 'react-native';
 import { Camera } from 'expo-camera';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-
+import { getAuth } from 'firebase/auth';
+import { FIREBASE_AUTH , FIREBASE_DB } from '../../FirebaseConfig';
+import { collection, getDocs , where ,query} from 'firebase/firestore';
+import { set } from 'react-hook-form';
+import Canvas from 'react-native-canvas';  // สำหรับ React Native
+// import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
 interface RouterProps {
     navigation : NavigationProp<any, any>;
 }
@@ -14,9 +21,39 @@ const FaceScan = ({navigation} : RouterProps) => {
     const cameraRef = useRef<Camera | null>(null); // สร้าง reference สำหรับกล้อง
     const [isCameraActive, setIsCameraActive] = useState(true); // ใช้ state เพื่อควบคุมการแสดงกล้อง
     const [photoUri, setPhotoUri] = useState<string | null>(null); // state สำหรับเก็บ URI ของภาพ
+    const [userId, setUserId] = useState<string | null>(null); // state สำหรับเก็บ userId
+    const canvasRef = useRef(null);
+    const [base64Image, setBase64Image] = useState('');
 
+    const getUserIdByEmail = async () => {
+        const auth = getAuth();
+        const user = auth.currentUser;
 
+        if (!user || !user.email) {
+          alert('❌ ยังไม่มีผู้ใช้ login อยู่');
+          return null;
+        }
       
+        const q = query(
+          collection(FIREBASE_DB, 'user_id'),
+          where('email', '==', user.email)
+        );
+      
+        const querySnapshot = await getDocs(q);
+      
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0];
+          const userId = userDoc.id; // ✅ นี่คือ Document ID
+          setUserId(userId); // เก็บ userId ใน state
+        }
+    }
+
+    useEffect(()  => {
+      getUserIdByEmail();
+    }, [])
+    
+
+
     if (!permission) {
       // Camera permissions are still loading.
       return <View />;
@@ -53,31 +90,77 @@ const FaceScan = ({navigation} : RouterProps) => {
         setIsCameraActive(false); // ซ่อนกล้องเมื่อกด "ปิด"
         navigation.goBack(); // หรือจะใช้ navigation ไปยังหน้าก่อนหน้า
     };
+
+    // useEffect(() => {
+    //   const drawImage = async (canvas) => {
+    //     const context = canvas.getContext('2d');
+    //     const img = new Image();
+    //     img.src = photoUri;
+        
+    //     img.onload = () => {
+    //       context.drawImage(img, 0, 0);  // วาดภาพลงบน canvas
+    //       // แปลง canvas เป็น base64
+    //       const base64 = canvas.toDataURL();  // ได้ผลลัพธ์เป็น base64 string
+    //       setBase64Image(base64);  // เก็บ base64 ใน state
+    //     };
+    //   };
+  
+    //   if (canvasRef.current) {
+    //     drawImage(canvasRef.current);
+    //   }
+    // }, [photoUri]);
+
+    const uriToBase64 = async (uri: string): Promise<string> => {
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return base64;
+    };
+
     const uploadImage = async (uri: string) => {
+       
+
+      const formData = new FormData();
+      try {
+        // const base64 = await uriToBase64(uri_send);
+
+        const fileName = uri.split('/').pop() ?? 'image.jpg';
+        const match = /\.(\w+)$/.exec(fileName);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+    
         const formData = new FormData();
-        const response = await fetch(uri);
-        const blob = await response.blob(); // แปลง URI เป็น blob
+        console.log(userId);
+        formData.append('user_id', userId); // เพิ่ม user_id
+        formData.append('file', {
+          uri,
+          name: fileName,
+          type,
+        } as any); 
+
+        
+        // formData.append('image', blob, 'image.jpg');
+        // formData.append('file', blob, 'image.jpg'); // เพิ่มไฟล์ใน FormData
+        // formData.append('image', `data:image/jpeg;base64,${base64}`);
     
-        formData.append('file', blob, 'image.jpg'); // ใช้ 'file' เป็นชื่อฟิลด์ที่ API ต้องการ
-    
-        try {
-          const uploadResponse = await fetch('https://your-api-endpoint.com/upload', {
-            method: 'POST',
-            body: formData,
-            headers: {
-              'Content-Type': 'multipart/form-data', // ระบุ Content-Type เป็น multipart/form-data
-            },
-          });
-    
-          const result = await uploadResponse.json(); // ดึงผลลัพธ์จาก server
-          console.log('Upload successful', result);
-          Alert.alert('Upload Successful', 'Image uploaded successfully!');
-        } catch (error) {
-          console.error('Upload failed:', error);
-          Alert.alert('Error', 'Image upload failed');
+        const uploadResponse = await fetch('http://192.168.1.121:8000/register_face_emp/', {
+          method: 'POST',
+          
+          body: formData,
+        });
+        console.log('Response:', uploadResponse);
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image');
         }
-      };
     
+        const result = await uploadResponse.json();
+        console.log('Upload successful', result);
+        Alert.alert('Upload Successful', 'Image uploaded successfully!');
+      } catch (error) {
+        console.error('Upload failed:', error);
+        Alert.alert('Error');
+      }
+      };
+  
   return (
     <View style={styles.container}>
         <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
@@ -164,4 +247,5 @@ const styles = StyleSheet.create({
        
       }
   });
+  
 export default FaceScan
