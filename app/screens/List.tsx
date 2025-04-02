@@ -33,14 +33,14 @@ const list = ({navigation} : RouterProps) => {
           const userId = userDoc.id; // ✅ นี่คือ Document ID
        
       
-          console.log('✅ พบ user_id:', userId);
+          // console.log('✅ พบ user_id:', userId);
 
           checkUserIdInFaceEmbedding(userId);
           
         } else {
             FIREBASE_AUTH.signOut()
             navigation.goBack()
-            alert('❌ ไม่พบ email นี้ใน collection user_id');
+            // alert('❌ ไม่พบ email นี้ใน collection user_id');
             return null;
         }
       };
@@ -57,7 +57,7 @@ const list = ({navigation} : RouterProps) => {
           const querySnapshot = await getDocs(q);
       
           if (!querySnapshot.empty) {
-            alert(`✅ พบ user_id "${userIdToCheck}" ใน emp_face_embedding`);
+            // alert(`✅ พบ user_id "${userIdToCheck}" ใน emp_face_embedding`);
             return true;
           } else {
             // alert(`❌ ไม่พบ user_id "${userIdToCheck}" ใน emp_face_embedding`);

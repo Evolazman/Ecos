@@ -1,6 +1,6 @@
 import React, { useEffect, useState  ,useRef } from 'react';
 import { NavigationProp } from '@react-navigation/native'
-import {StyleSheet ,TouchableOpacity , View, Text , Button ,Image } from 'react-native'
+import {StyleSheet ,TouchableOpacity , View, Text , Button ,Image , ActivityIndicator } from 'react-native'
 import { Alert } from 'react-native';
 import { Camera } from 'expo-camera';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
@@ -24,6 +24,7 @@ const FaceScan = ({navigation} : RouterProps) => {
     const [userId, setUserId] = useState<string | null>(null); // state สำหรับเก็บ userId
     const canvasRef = useRef(null);
     const [base64Image, setBase64Image] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const getUserIdByEmail = async () => {
         const auth = getAuth();
@@ -78,7 +79,7 @@ const FaceScan = ({navigation} : RouterProps) => {
             const photo = await cameraRef.current.takePictureAsync();
             console.log('Photo taken:', photo.uri);
             setPhotoUri(photo.uri); // เก็บ URI ของภาพใน state
-            Alert.alert('Photo Taken', 'Your photo has been taken successfully!\nImage URI: ${photo.uri}');
+            // Alert.alert('Photo Taken', 'Your photo has been taken successfully!\nImage URI: ${photo.uri}');
             // คุณสามารถส่ง `photo.uri` หรือข้อมูลอื่น ๆ ไปหน้าอื่นได้
         } else {
             Alert.alert('Error', 'Unable to take photo.');
@@ -87,8 +88,8 @@ const FaceScan = ({navigation} : RouterProps) => {
     };
 
     const closeCamera = () => {
-        setIsCameraActive(false); // ซ่อนกล้องเมื่อกด "ปิด"
-        navigation.goBack(); // หรือจะใช้ navigation ไปยังหน้าก่อนหน้า
+      setIsCameraActive(false); // ซ่อนกล้องเมื่อกด "ปิด"
+      navigation.navigate('home'); // หรือจะใช้ navigation ไปยังหน้าหลัก
     };
 
     // useEffect(() => {
@@ -118,10 +119,8 @@ const FaceScan = ({navigation} : RouterProps) => {
     };
 
     const uploadImage = async (uri: string) => {
-       
-
-      const formData = new FormData();
       try {
+        setLoading(true);
         // const base64 = await uriToBase64(uri_send);
 
         const fileName = uri.split('/').pop() ?? 'image.jpg';
@@ -153,11 +152,17 @@ const FaceScan = ({navigation} : RouterProps) => {
         }
     
         const result = await uploadResponse.json();
-        console.log('Upload successful', result);
-        Alert.alert('Upload Successful', 'Image uploaded successfully!');
+        if (result.message === 'success') {
+          Alert.alert('Success', 'สร้างใบหน้าเสร็จสิ้นแล้ว');
+          navigation.navigate('home'); // เปลี่ยนไปยังหน้าหลักหลังจากอัปโหลดเสร็จ
+        }else{
+          Alert.alert('Error', 'ไม่สามารถสร้างใบหน้าได้ กรุณาลองใหม่อีกครั้ง');
+        }
+        setLoading(false);
       } catch (error) {
         console.error('Upload failed:', error);
         Alert.alert('Error');
+        setLoading(false);
       }
       };
   
@@ -178,24 +183,77 @@ const FaceScan = ({navigation} : RouterProps) => {
                 </TouchableOpacity>
             </View>
         </CameraView>
-        {/* แสดงภาพที่ถ่าย */}
-      {photoUri && (
-        <View style={styles.photoContainer}>
-          <Text style={styles.text}>ภาพที่ถ่าย</Text>
-          <TouchableOpacity style={styles.buttonUpload} onPress={() => uploadImage(photoUri)}>
-            <Text style={styles.textUpload}>อัปโหลดภาพ</Text>
-          </TouchableOpacity>
-          <Image source={{ uri: photoUri }} style={styles.photo} />
-          
+        {loading && (
+        <View style={styles.overlay}>
+          <ActivityIndicator size="large" color="#fff" />
         </View>
+      )}
+        {/* แสดงภาพที่ถ่าย */}
+        
+      {photoUri && (
+        // <View style={styles.photoContainer}>
+          
+        //   <TouchableOpacity style={styles.topBar} onPress={() => uploadImage(photoUri)}>
+        //     <Text style={styles.textUpload}>อัปโหลดภาพ</Text>
+        //   </TouchableOpacity>
+        //   <Image source={{ uri: photoUri }} style={styles.photo} />
+          
+        // </View>
+        <View style={styles.container_photo}>
+        {/* Top Bar */}
+          <TouchableOpacity style={styles.topBar} onPress={() => uploadImage(photoUri)}>
+            <Text style={styles.topBarSmallBox}>อัปโหลดภาพ</Text>
+          </TouchableOpacity>
+  
+        {/* Main Content Area */}
+          <View style={styles.contentBox}>
+            <Image source={{ uri: photoUri }} style={styles.photo} />
+          </View>
+      </View>
+        
       )}
   </View>
   )
 }
 const styles = StyleSheet.create({
+  container_photo: {
+    flex: 0.8,
+    padding: 10,
+    backgroundColor: '#fff',
+    justifyContent: 'flex-start',
+  },
+  topBar: {
+    height: 60,
+    // backgroundColor: 'gray',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  topBarSmallBox: {
+    width: '30%',
+    height: '100%',
+    color: '#000',
+    textAlign: 'center',
+    padding : 10,
+    color: '#ba0900',
+    fontSize: 18,
+    fontWeight: 'bold',
+    
+    
+    // backgroundColor: 'black',
+  },
+  contentBox: {
+    flex: 1,
+    // backgroundColor: 'gray',
+    
+    alignItems: 'center',
+  },
     container: {
       flex: 1,
       justifyContent: 'center',
+      
+      backgroundColor: '#181818',
     },
     message: {
       textAlign: 'center',
@@ -220,7 +278,7 @@ const styles = StyleSheet.create({
     text: {
       fontSize: 20,
       fontWeight: 'bold',
-      color: '#000',
+      color: '#fff',
     },
     textUpload: {
         fontSize: 16,
@@ -230,13 +288,13 @@ const styles = StyleSheet.create({
     photoContainer: {
         position: 'relative',
         alignItems: 'center',
-        marginTop: 20,
+        borderRadius: 10,
+        backgroundColor: '#fff',
     },photo: {
         width: 300,
         height: 300,
-        marginTop: 10,
         borderRadius: 10,
-        marginBottom: 50,
+
     },
     buttonUpload: {
         position: 'absolute',
@@ -245,7 +303,19 @@ const styles = StyleSheet.create({
         color: '#000',
         right: 10,
        
-      }
+      },
+      overlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width : '100%',
+        height : '100%',
+
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        zIndex: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
   });
   
 export default FaceScan

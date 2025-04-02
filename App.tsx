@@ -18,8 +18,8 @@ const InsideStack = createNativeStackNavigator();
 function InsideLayout() {
   return (
     <InsideStack.Navigator>
-      <InsideStack.Screen name='Ecos TEST' component={List} /> 
-      <InsideStack.Screen name='details' component={Details} /> 
+      <InsideStack.Screen name='home' component={List} options={{headerShown : false}}/> 
+      <InsideStack.Screen name='details' component={Details}  options={{headerShown : false}}/> 
       <InsideStack.Screen name='faceScan' component={FaceScan} options={{headerShown : false}} /> 
     </InsideStack.Navigator>
   );
