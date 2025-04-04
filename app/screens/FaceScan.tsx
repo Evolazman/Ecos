@@ -1,17 +1,15 @@
 import React, { useEffect, useState  ,useRef } from 'react';
 import { NavigationProp } from '@react-navigation/native'
-import {StyleSheet ,TouchableOpacity , View, Text , Button ,Image , ActivityIndicator } from 'react-native'
+import {StyleSheet ,TouchableOpacity , View, Text , Button ,Image , ActivityIndicator  } from 'react-native'
 import { Alert } from 'react-native';
-import { Camera } from 'expo-camera';
+
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { getAuth } from 'firebase/auth';
 import { FIREBASE_AUTH , FIREBASE_DB } from '../../FirebaseConfig';
-import { collection, getDocs , where ,query} from 'firebase/firestore';
-import { set } from 'react-hook-form';
-import Canvas from 'react-native-canvas';  // สำหรับ React Native
-// import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { collection, getDocs , where ,query ,setDoc , doc , addDoc} from 'firebase/firestore';
+
 import * as FileSystem from 'expo-file-system';
+import FaceRecognitionPolicyModal from '../../component/FaceRecognitionPolicyModal';
 interface RouterProps {
     navigation : NavigationProp<any, any>;
 }
@@ -25,6 +23,46 @@ const FaceScan = ({navigation} : RouterProps) => {
     const canvasRef = useRef(null);
     const [base64Image, setBase64Image] = useState('');
     const [loading, setLoading] = useState(false);
+    const [modalVisible, setModalVisible] = useState(true); // state สำหรับ modal
+
+    const [showPolicyModal, setShowPolicyModal] = useState(true); // Show modal immediately
+    
+
+    const handlePolicyAccept = () => {
+      setShowPolicyModal(false);
+      handleSetDataPolicyAccept(); // Call the function to set data policy acceptance
+    };
+
+    const handleSetDataPolicyAccept = async () => {
+      await addDoc(collection(FIREBASE_DB, 'Consent_Log'), {
+        consentGiven: true,
+        consentType: "biometric",
+        policyVersion: "1.0",
+        timestamp : new Date(),
+        user_id: userId,
+      });
+      // const q = query(
+      //   collection(FIREBASE_DB, 'Consent_Log'),
+      //   where('user_id', '==', userId)
+      // );
+    
+      // const querySnapshot = await getDocs(q);
+    
+      // if (querySnapshot.empty) {
+      //   alert('❌ ข้อมูลการยินยอมนี้มีอยู่แล้วในฐานข้อมูล');
+      //   return;
+      // }else {
+      //   alert('❌ ข้อมูลการยินยอมนี้มีอยู่แล้วในฐานข้อมูล');
+        
+      // }
+    }
+
+
+
+    const handlePolicyDecline = () => {
+      // Redirect to login if they decline the policy
+      FIREBASE_AUTH.signOut()
+    };
 
     const getUserIdByEmail = async () => {
         const auth = getAuth();
@@ -66,6 +104,7 @@ const FaceScan = ({navigation} : RouterProps) => {
         <View style={styles.container}>
           <Text style={styles.message}>We need your permission to show the camera</Text>
           <Button onPress={requestPermission} title="grant permission" />
+          
         </View>
       );
     }
@@ -168,6 +207,62 @@ const FaceScan = ({navigation} : RouterProps) => {
   
   return (
     <View style={styles.container}>
+      <FaceRecognitionPolicyModal
+          visible={showPolicyModal}
+          onAccept={handlePolicyAccept}
+          onDecline={handlePolicyDecline}
+        />
+        {/* <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)} // Android back button
+        >
+          <View style={styles.modalBackground}>
+            <View style={styles.modalContainer}>
+            <ScrollView >
+              <Text style={styles.headerMessage}>นโยบายความเป็นส่วนตัวเกี่ยวกับการจัดเก็บข้อมูลใบหน้า</Text>
+              <Text style={styles.midMessage}>วัตถุประสงค์ในการเก็บข้อมูล</Text>
+              
+              <Text style={styles.smallMessage}>เรามีการจัดเก็บข้อมูลใบหน้าของท่านเพื่อใช้ในการยืนยันตัวตน การลงทะเบียนเข้าใช้งานระบบ และเพิ่มความปลอดภัยในการใช้งาน โดยข้อมูลใบหน้าของท่านจะถูกใช้เฉพาะตามวัตถุประสงค์ที่แจ้งไว้เท่านั้น ไม่มีการใช้เพื่อวัตถุประสงค์อื่นใดโดยไม่ได้รับอนุญาตจากท่าน</Text>
+              
+              <Text style={styles.midMessage}>ข้อมูลที่เราเก็บรวบรวม</Text>
+              <Text style={styles.smallMessage}>1. รูปภาพหรือวิดีโอของใบหน้าเพื่อใช้ในการระบุหรือยืนยันตัวตน</Text>
+              <Text style={styles.smallMessage}>2. ข้อมูลโครงสร้างใบหน้า (facial landmarks) ซึ่งระบบจะใช้ในการจดจำใบหน้า</Text>
+              
+
+              <Text style={styles.midMessage}>วิธีการเก็บข้อมูล</Text>
+              <Text style={styles.smallMessage}>ข้อมูลใบหน้าของท่านจะถูกเก็บผ่านระบบสแกนใบหน้า หรือการอัปโหลดภาพจากอุปกรณ์ของท่านเอง โดยเราจะดำเนินการเข้ารหัสข้อมูล (encryption) เพื่อความปลอดภัยและป้องกันการเข้าถึงจากบุคคลที่ไม่ได้รับอนุญาต</Text>
+
+              <Text style={styles.midMessage}>การจัดเก็บและระยะเวลา</Text>
+              <Text style={styles.smallMessage}>ข้อมูลใบหน้าของท่านจะถูกจัดเก็บอย่างปลอดภัยในฐานข้อมูลที่มีการควบคุมการเข้าถึงอย่างเคร่งครัด โดยจะถูกเก็บไว้เฉพาะในช่วงระยะเวลาที่ท่านยังคงใช้งานบริการหรือจนกว่าท่านจะแจ้งยกเลิกหรือถอนความยินยอม และเราจะดำเนินการลบข้อมูลใบหน้าของท่านทันทีเมื่อหมดวัตถุประสงค์ในการใช้งาน</Text>
+              
+              <Text style={styles.midMessage}>การเปิดเผยข้อมูลต่อบุคคลที่สาม</Text>
+              <Text style={styles.smallMessage}>เราจะไม่เปิดเผยข้อมูลใบหน้าของท่านให้แก่บุคคลภายนอกหรือองค์กรอื่น เว้นแต่จะได้รับความยินยอมจากท่านเป็นลายลักษณ์อักษร หรือเป็นกรณีที่จำเป็นตามข้อกฎหมายเท่านั้น</Text>
+
+              <Text style={styles.midMessage}>สิทธิของเจ้าของข้อมูล</Text>
+              <Text style={styles.smallMessage}>1. ท่านมีสิทธิที่จะขอเข้าถึงข้อมูลของท่านเองได้ทุกเมื่อ</Text>
+              <Text style={styles.smallMessage}>2. ท่านสามารถขอให้มีการแก้ไข อัปเดต หรือเปลี่ยนแปลงข้อมูลที่ไม่ถูกต้องหรือไม่สมบูรณ์ได้</Text>
+              <Text style={styles.smallMessage}>3. ท่านมีสิทธิขอถอนความยินยอมในการจัดเก็บข้อมูลใบหน้าของท่านได้ทุกเมื่อ</Text>
+
+              <Text style={styles.midMessage}>ช่องทางติดต่อสอบถาม</Text>
+              <Text style={styles.smallMessage}>หากท่านมีข้อสงสัยเกี่ยวกับการจัดเก็บข้อมูลใบหน้าของท่าน หรือต้องการใช้สิทธิของเจ้าของข้อมูล สามารถติดต่อได้ที่ : </Text>
+              <Text style={styles.smallMessage}>อีเมล: Ecos@EcoCycle.com</Text>
+              <Text style={styles.smallMessage}>เบอร์โทรศัพท์: 02-888-2999</Text>
+
+              <Text style={styles.smallMessage}>ทางเราขอขอบคุณที่ท่านไว้วางใจและให้ความร่วมมือในการดูแลข้อมูลส่วนบุคคลของท่าน</Text>
+
+              <Text style={styles.smallMessage}>การให้ความยินยอม
+
+ข้าพเจ้าได้อ่าน ทำความเข้าใจ และยินยอมให้มีการจัดเก็บและใช้ข้อมูลใบหน้าตามรายละเอียดในนโยบายฉบับนี้ โดยสมัครใจ ไม่มีการบังคับ หรือถูกชักจูงแต่อย่างใด
+
+[  ] ข้าพเจ้ายินยอมให้เก็บข้อมูลใบหน้า</Text>
+
+              <Button title="Close" onPress={() => setModalVisible(false)} />
+              </ScrollView>
+            </View>
+          </View>
+        </Modal> */}
         <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
             <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
@@ -216,6 +311,37 @@ const FaceScan = ({navigation} : RouterProps) => {
   )
 }
 const styles = StyleSheet.create({
+  headerMessage: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ba0900',
+    paddingBottom: 10,
+  },midMessage: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    paddingBottom: 10,
+  },smallMessage: {
+    fontSize: 14,
+    color: '#000',
+    paddingBottom: 10,
+  },
+  modalBackground: {
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)'
+  },
+  modalContainer: {
+    width: "90%", 
+    paddingTop: 60, 
+    paddingBottom: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
+    backgroundColor: 'white', 
+    borderRadius: 10,
+    height: '90%',
+  },
   container_photo: {
     flex: 0.8,
     padding: 10,

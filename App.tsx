@@ -29,7 +29,6 @@ function loginRegister() {
     <InsideStack.Navigator>
       <InsideStack.Screen name='Login' component={Login} options={{headerShown : false}} /> 
       <InsideStack.Screen name='Register' component={Register} options={{headerShown : false}} /> 
-
     </InsideStack.Navigator>
   );
 }
