@@ -48,6 +48,10 @@ const Login = ({navigation} : RouterProps) => {
             <TouchableOpacity style={styles.btnRegister} onPress={() => navigation.navigate('Register')}>
                 <Text style={styles.btnTextRegister}>Create account ?</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={styles.btnRegister} onPress={() => navigation.navigate('ForgotPassword')}>
+                <Text style={styles.btnTextRegister}>Forgot Your Password?</Text>
+            </TouchableOpacity>
              
             </>
             }

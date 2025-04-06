@@ -8,6 +8,7 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { FIREBASE_AUTH } from './FirebaseConfig';
 import Register from './app/screens/Register';
 import FaceScan from './app/screens/FaceScan';
+import ForgotPassword from './app/screens/ForgotPassword';
 // import Scanface from './app/screens/Scanface';
 
 
@@ -29,6 +30,7 @@ function loginRegister() {
     <InsideStack.Navigator>
       <InsideStack.Screen name='Login' component={Login} options={{headerShown : false}} /> 
       <InsideStack.Screen name='Register' component={Register} options={{headerShown : false}} /> 
+      <InsideStack.Screen name='ForgotPassword' component={ForgotPassword} options={{headerShown : false}} /> 
     </InsideStack.Navigator>
   );
 }
